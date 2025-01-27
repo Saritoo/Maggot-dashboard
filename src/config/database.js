@@ -1,3 +1,4 @@
+// MySQL connection
 const mysql = require('mysql2');
 
 // Konfigurasi database

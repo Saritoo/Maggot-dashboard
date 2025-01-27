@@ -1,3 +1,5 @@
+// Publish commands to devices
+
 const mqtt = require('mqtt');
 const client = mqtt.connect('mqtt://movie-swing.gl.at.ply.gg:65088');
 
