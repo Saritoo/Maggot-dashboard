@@ -2,10 +2,10 @@ require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const sequelize = require('./config/database');
-const mqttSubscriber = require('./mqtt/subscriber');
-const mqttPublisher = require('./mqtt/publisher');
-const apiRoutes = require('./routes/api');
+const sequelize = require('./src/config/database');
+const mqttSubscriber = require('./src/mqtt/subscriber');
+const mqttPublisher = require('./src/mqtt/publisher');
+const apiRoutes = require('./src/routers/api');
 
 // Inisialisasi Express
 const app = express();
@@ -46,7 +46,7 @@ app.use((req, res) => {
 });
 
 // Server Startup
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001
 app.listen(PORT, () => {
   console.log(`
   ==================================================

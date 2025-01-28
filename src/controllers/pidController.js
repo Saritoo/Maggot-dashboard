@@ -7,7 +7,7 @@ const pidConfig = {
   kd: 1.0,
   targetTemp: 28,
   targetHumidity: 65,
-  sampleTime: 1000
+  sampleTime: 1000 // PID update interval in milliseconds
 };
 
 let lastTempError = 0;
@@ -16,35 +16,51 @@ let lastHumidityError = 0;
 let humidityIntegral = 0;
 let lastUpdate = Date.now();
 
+/**
+ * Function to calculate PID output.
+ * Prevents division by zero and ensures PWM remains within valid range.
+ */
 function calculatePID(current, target, lastError, integral) {
   const error = target - current;
   const now = Date.now();
-  const dt = (now - lastUpdate) / 1000;
+  let dt = (now - lastUpdate) / 1000; // Convert ms to seconds
+  
+  if (dt <= 0) dt = 1; // Prevent division by zero
 
   integral += error * dt;
   const derivative = (error - lastError) / dt;
 
-  let output = pidConfig.kp * error + 
-              pidConfig.ki * integral + 
-              pidConfig.kd * derivative;
+  let output = pidConfig.kp * error + pidConfig.ki * integral + pidConfig.kd * derivative;
 
+  // Ensure PWM is within 0-255 range
   output = Math.max(0, Math.min(255, output));
+
   return { output, integral, error };
 }
 
+/**
+ * Processes temperature and humidity data using PID control.
+ * Publishes calculated PWM values via MQTT.
+ */
 function processSensorData(temperature, humidity) {
   const now = Date.now();
-  if (now - lastUpdate < pidConfig.sampleTime) return;
-  
-  // Temperature PID
+  console.log(`Processing PID at ${new Date().toISOString()} | Temp: ${temperature}, Humidity: ${humidity}`);
+
+  // Ensure PID only updates at the defined sample time
+  if (now - lastUpdate < pidConfig.sampleTime) {
+    console.log('Skipping PID update due to sample time restriction');
+    return;
+  }
+
+  // Compute PID for Temperature
   const tempResult = calculatePID(
     temperature,
     pidConfig.targetTemp,
     lastTempError,
     tempIntegral
   );
-  
-  // Humidity PID
+
+  // Compute PID for Humidity
   const humidityResult = calculatePID(
     humidity,
     pidConfig.targetHumidity,
@@ -66,6 +82,9 @@ function processSensorData(temperature, humidity) {
     timestamp: new Date().toISOString()
   };
 
+  console.log('Calculated PWM:', pwmData);
+
+  // Publish PWM values via MQTT
   publishPWM(pwmData);
 }
 

@@ -11,8 +11,14 @@ client.on('connect', () => {
 });
 
 const publishPWM = (pwmData) => {
-  client.publish(PWM_TOPIC, JSON.stringify(pwmData));
-  console.log('Published PWM:', pwmData);
+  console.log(`Publishing PWM to ${PWM_TOPIC}:`, JSON.stringify(pwmData));
+  client.publish(PWM_TOPIC, JSON.stringify(pwmData), (err) => {
+    if (err) {
+      console.error('Failed to publish PWM:', err);
+    } else {
+      console.log('Successfully published PWM');
+    }
+  });
 };
 
 module.exports = { publishPWM };
