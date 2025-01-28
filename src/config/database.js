@@ -1,18 +1,18 @@
-// MySQL connection
-const mysql = require('mysql2');
+const { Sequelize } = require('sequelize');
+require('dotenv').config();
 
-// Konfigurasi database
-const db = mysql.createConnection({
-  host: 'localhost',
-  user: 'root',
-  password: 'TLWN722n',    // Ganti sesuai konfigurasi MySQL
-  database: 'sensor_db'
+const sequelize = new Sequelize(
+  process.env.DB_NAME,
+  process.env.DB_USER,
+  process.env.DB_PASSWORD, {
+    host: process.env.DB_HOST,
+    dialect: 'mysql',
+    logging: false
 });
 
-// Koneksi ke database
-db.connect(err => {
-  if (err) throw err;
-  console.log('Terhubung ke database MySQL!');
-});
+// Test connection
+sequelize.authenticate()
+  .then(() => console.log('MySQL connected successfully'))
+  .catch(err => console.error('MySQL connection error:', err));
 
-module.exports = db;
+module.exports = sequelize;
