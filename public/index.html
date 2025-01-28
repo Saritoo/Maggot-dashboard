@@ -4,204 +4,107 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rumah Maggot Dashboard</title>
+    
+    <!-- External CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/style.css" rel="stylesheet">
+    
+    <!-- External Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="/socket.io/socket.io.js"></script>
-    <script>
-        // Koneksi ke server Socket.IO
-        const socket = io();
-    
-        // Event untuk menerima data dari server
-        socket.on('mqttData', (data) => {
-            document.getElementById('temperature').innerText = data.temperature;
-            document.getElementById('humidity').innerText = data.humidity;
-            document.getElementById('pressure').innerText = data.pressure;
-            document.getElementById('altitude').innerText = data.altitude;
-            document.getElementById('heatIndex').innerText = data.heatIndex;
-            document.getElementById('dewPoint').innerText = data.dewPoint;
-        });
-    </script>
-    <style>
-        body {
-            background-color: #f8f9fa;
-        }
-        .sidebar {
-            height: 100vh;
-            background-color: #343a40;
-            color: white;
-        }
-        .sidebar a {
-            color: white;
-            text-decoration: none;
-            display: block;
-            padding: 10px 15px;
-        }
-        .sidebar a:hover {
-            background-color: #495057;
-        }
-        .content {
-            margin-left: 250px;
-            padding: 20px;
-        }
-        .card-title {
-            font-weight: bold;
-        }
-    </style>
 </head>
 <body>
+    <div class="d-flex">
+        <!-- Sidebar -->
+        <div class="sidebar p-3">
+            <h4>Rumah Maggot</h4>
+            <a href="#overview">Overview</a>
+            <a href="#monitoring">Monitoring</a>
+            <a href="#settings">Settings</a>
+        </div>
 
-<div class="d-flex">
-    <!-- Sidebar -->
-    <div class="sidebar p-3">
-        <h4>Rumah Maggot</h4>
-        <a href="#overview">Overview</a>
-        <a href="#monitoring">Monitoring</a>
-        <a href="#settings">Settings</a>
+        <!-- Main Content -->
+        <div class="content w-100">
+            <h2>Overview</h2>
+            <!-- Sensor Cards Row 1 -->
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="card text-white bg-primary mb-3">
+                        <div class="card-body">
+                            <h5 class="card-title">Suhu</h5>
+                            <p class="card-text"><span id="temperature">--</span> °C</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-white bg-success mb-3">
+                        <div class="card-body">
+                            <h5 class="card-title">Kelembaban</h5>
+                            <p class="card-text"><span id="humidity">--</span> %</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-white bg-warning mb-3">
+                        <div class="card-body">
+                            <h5 class="card-title">Berat Maggot</h5>
+                            <p class="card-text" id="weight">490g</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-white bg-danger mb-3">
+                        <div class="card-body">
+                            <h5 class="card-title">Sisa Pakan</h5>
+                            <p class="card-text" id="feed">200g</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Sensor Cards Row 2 -->
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="card text-white bg-primary mb-3">
+                        <div class="card-body">
+                            <h5 class="card-title">Tekanan Udara</h5>
+                            <p class="card-text"><span id="pressure">--</span> pa</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-white bg-primary mb-3">
+                        <div class="card-body">
+                            <h5 class="card-title">Ketinggian</h5>
+                            <p class="card-text"><span id="altitude">--</span> m</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts -->
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h5 class="card-title">Kondisi Kandang</h5>
+                            <canvas id="environmentChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h5 class="card-title">Berat Maggot</h5>
+                            <canvas id="weightChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- Main Content -->
-    <div class="content w-100">
-        <h2>Overview</h2>
-        <div class="row">
-            <div class="col-md-3">
-                <div class="card text-white bg-primary mb-3">
-                    <div class="card-body">
-                        <h5 class="card-title">Suhu</h5>
-                        <p class="card-text"><span id="temperature">--</span> °C</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card text-white bg-success mb-3">
-                    <div class="card-body">
-                        <h5 class="card-title">Kelembaban</h5>
-                        <p class="card-text"><span id="humidity">--</span> %</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card text-white bg-warning mb-3">
-                    <div class="card-body">
-                        <h5 class="card-title">Berat Maggot</h5>
-                        <p class="card-text" id="weight">490g</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card text-white bg-danger mb-3">
-                    <div class="card-body">
-                        <h5 class="card-title">Sisa Pakan</h5>
-                        <p class="card-text" id="feed">200g</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="row">
-            <div class="col-md-3">
-                <div class="card text-white bg-primary mb-3">
-                    <div class="card-body">
-                        <h5 class="card-title">Tekanan Udara</h5>
-                        <p class="card-text"><span id="pressure">--</span> pa</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card text-white bg-primary mb-3">
-                    <div class="card-body">
-                        <h5 class="card-title">Ketinggian</h5>
-                        <p class="card-text"><span id="altitude">--</span> m</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Charts -->
-        <div class="row">
-            <div class="col-md-8">
-                <div class="card mb-3">
-                    <div class="card-body">
-                        <h5 class="card-title">Kondisi Kandang</h5>
-                        <canvas id="environmentChart"></canvas>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card mb-3">
-                    <div class="card-body">
-                        <h5 class="card-title">Berat Maggot</h5>
-                        <canvas id="weightChart"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<h2>Real-time Sensor Dashboard</h2>
-  <h2>Suhu & Kelembaban</h2>
-  <canvas id="suhuChart" width="600" height="300"></canvas>
-
-  <h2>Tekanan & Ketinggian</h2>
-  <canvas id="pakanChart" width="600" height="300"></canvas>
-
-  <script src="script.js"></script>
-
-<script>
-    // Chart untuk Suhu dan Kelembaban
-    const ctxEnv = document.getElementById('environmentChart').getContext('2d');
-    const environmentChart = new Chart(ctxEnv, {
-        type: 'line',
-        data: {
-            labels: ['0', '1', '2', '3', '4', '5', '6'],
-            datasets: [
-                {
-                    label: 'Suhu (°C)',
-                    data: [30, 31, 32, 31, 30, 29, 30],
-                    borderColor: 'rgba(255, 99, 132, 1)',
-                    fill: false
-                },
-                {
-                    label: 'Kelembaban (%)',
-                    data: [70, 72, 68, 71, 69, 70, 70],
-                    borderColor: 'rgba(54, 162, 235, 1)',
-                    fill: false
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
-            }
-        }
-    });
-
-    // Chart untuk Berat Maggot
-    const ctxWeight = document.getElementById('weightChart').getContext('2d');
-    const weightChart = new Chart(ctxWeight, {
-        type: 'line',
-        data: {
-            labels: ['0', '1', '2', '3', '4', '5', '6'],
-            datasets: [{
-                label: 'Berat Maggot (g)',
-                data: [400, 420, 450, 470, 480, 490, 500],
-                borderColor: 'rgba(255, 206, 86, 1)',
-                fill: false
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
-            }
-        }
-    });
-</script>
-
+    <!-- Scripts -->
+    <script src="js/script.js"></script>
 </body>
 </html>
