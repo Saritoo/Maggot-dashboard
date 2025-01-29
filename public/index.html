@@ -31,23 +31,26 @@
                 </div>
             </div>
         
-            <!-- Setpoint Values -->
-            <div class="setpoint-container">
-                <div class="setpoint-item">
-                    <span class="setpoint-label">Setpoint Suhu</span>
+            <!-- Realtime Values -->
+            <div class="Realtime-container">
+                <div class="Realtime-item">
+                    <span class="material-icons" style="font-size: 1.5rem; color: var(--secondary-color);">device_thermostat</span>
+                    <!-- <span class="Realtime-label">Realtime Suhu</span> -->
                     <div>
-                        <span class="setpoint-value" id="temperatureSetpointValue">--</span>
+                        <span class="Realtime-value" id="temperatureRealtimeValue">--</span>
                         <span class="unit">°C</span>
                     </div>
-                </div>
+                </div>                
                 
-                <div class="setpoint-item">
-                    <span class="setpoint-label">Setpoint Kelembaban</span>
+                <div class="Realtime-item">
+                    <span class="material-icons" style="font-size: 1.5rem; color: var(--secondary-color);">water_drop</span>
+                    <!-- <span class="Realtime-label">Realtime Kelembaban</span> -->
                     <div>
-                        <span class="setpoint-value" id="humiditySetpointValue">--</span>
+                        <span class="Realtime-value" id="humidityRealtimeValue">--</span>
                         <span class="unit">%</span>
                     </div>
                 </div>
+                
             </div>
         
             <div class="chart-container">
@@ -74,42 +77,41 @@
                 </div>
             </div>
 
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">Pengaturan Pakan & PID</h2>
-                    <span class="material-icons">settings</span>
-                </div>
-                
-                <div class="value-container">
-                    <div>
-                        <span>Berat Maggot:</span>
-                        <span class="value" id="maggotWeight">--</span>
-                        <span class="unit">gr</span>
-                    </div>
-                </div>
-                <div class="value-container">
-                    <div>
-                        <span>Stok Pakan:</span>
-                        <span class="value" id="feedWeight">--</span>
-                        <span class="unit">gr</span>
-                    </div>
-                </div>
-                <div class="value-container">
-                    <div>
-                        <span>Waktu Pemberian Pakan:</span>
-                        <ul>
-                            <li id="feedTime1">06:00</li>
-                            <li id="feedTime2">12:00</li>
-                            <li id="feedTime3">18:00</li>
-                        </ul>
-                    </div>
-                </div>
-                
-                <div class="controls">
-                    <button class="button" onclick="openFeedSettings()">Atur Pakan</button>
-                    <button class="button" onclick="openPIDSettings()">Atur Lingkungan</button>
-                </div>
-            </div>
+<!-- Feeding & PID Control Card -->
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">Pengaturan Pakan & PID</h2>
+        <span class="material-icons icon-large">settings</span>
+    </div>
+
+    <div class="data-container">
+        <div class="data-box">
+            <span class="label">Berat Maggot</span>
+            <span class="value" id="maggotWeight">--</span>
+            <span class="unit">gr</span>
+        </div>
+        <div class="data-box">
+            <span class="label">Stok Pakan</span>
+            <span class="value" id="feedWeight">--</span>
+            <span class="unit">gr</span>
+        </div>
+    </div>
+
+    <div class="feed-time">
+        <span class="label">Waktu Pemberian Pakan</span>
+        <div class="time-list">
+            <span id="feedTime1">06:00</span>
+            <span id="feedTime2">12:00</span>
+            <span id="feedTime3">18:00</span>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="button" onclick="openFeedSettings()">Atur Pakan</button>
+        <button class="button" onclick="openPIDSettings()">Atur Lingkungan</button>
+    </div>
+</div>
+
             
             <!-- Modal untuk Pengaturan Pakan -->
             <div class="modal-overlay" id="feedSettingsModal">
