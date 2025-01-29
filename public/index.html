@@ -3,108 +3,157 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rumah Maggot Dashboard</title>
-    
-    <!-- External CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="css/style.css" rel="stylesheet">
-    
-    <!-- External Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="/socket.io/socket.io.js"></script>
+    <title>Maggot Farm Dashboard</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <div class="d-flex">
-        <!-- Sidebar -->
-        <div class="sidebar p-3">
-            <h4>Rumah Maggot</h4>
-            <a href="#overview">Overview</a>
-            <a href="#monitoring">Monitoring</a>
-            <a href="#settings">Settings</a>
+    <div class="dashboard">
+        <!-- Environment Card -->
+        <div class="card card-lingkungan">
+            <div class="card-header">
+                <h2 class="card-title">Lingkungan
+                    <span class="material-icons" style="font-size: 1.2rem; margin-left: 0.5rem;">adjust</span>
+                </h2>
+                <span class="material-icons">thermostat</span>
+            </div>
+            
+            <!-- Current Values -->
+            <div class="value-container">
+                <span class="material-icons icon">device_thermostat</span>
+                <div>
+                    <span class="value" id="temperature">--</span>
+                    <span class="unit">°C</span>
+                </div>
+                <div>
+                    <span class="value" id="humidity">--</span>
+                    <span class="unit">%</span>
+                </div>
+            </div>
+        
+            <!-- Setpoint Values -->
+            <div class="setpoint-container">
+                <div class="setpoint-item">
+                    <span class="setpoint-label">Setpoint Suhu</span>
+                    <div>
+                        <span class="setpoint-value" id="temperatureSetpointValue">--</span>
+                        <span class="unit">°C</span>
+                    </div>
+                </div>
+                
+                <div class="setpoint-item">
+                    <span class="setpoint-label">Setpoint Kelembaban</span>
+                    <div>
+                        <span class="setpoint-value" id="humiditySetpointValue">--</span>
+                        <span class="unit">%</span>
+                    </div>
+                </div>
+            </div>
+        
+            <div class="chart-container">
+                <canvas id="environmentChart"></canvas>
+            </div>
         </div>
 
-        <!-- Main Content -->
-        <div class="content w-100">
-            <h2>Overview</h2>
-            <!-- Sensor Cards Row 1 -->
-            <div class="row">
-                <div class="col-md-3">
-                    <div class="card text-white bg-primary mb-3">
-                        <div class="card-body">
-                            <h5 class="card-title">Suhu</h5>
-                            <p class="card-text"><span id="temperature">--</span> °C</p>
-                        </div>
+        <div class="cards-right">
+            <!-- PLTS Status Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Status PLTS</h2>
+                    <span class="material-icons">solar_power</span>
+                </div>
+                <div class="value-container">
+                    <span class="material-icons icon">battery_charging_full</span>
+                    <div>
+                        <span class="value" id="voltage">--</span>
+                        <span class="unit">V</span>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <div class="card text-white bg-success mb-3">
-                        <div class="card-body">
-                            <h5 class="card-title">Kelembaban</h5>
-                            <p class="card-text"><span id="humidity">--</span> %</p>
-                        </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="batteryLevel"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Pengaturan Pakan & PID</h2>
+                    <span class="material-icons">settings</span>
+                </div>
+                
+                <div class="value-container">
+                    <div>
+                        <span>Berat Maggot:</span>
+                        <span class="value" id="maggotWeight">--</span>
+                        <span class="unit">gr</span>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <div class="card text-white bg-warning mb-3">
-                        <div class="card-body">
-                            <h5 class="card-title">Berat Maggot</h5>
-                            <p class="card-text" id="weight">490g</p>
-                        </div>
+                <div class="value-container">
+                    <div>
+                        <span>Stok Pakan:</span>
+                        <span class="value" id="feedWeight">--</span>
+                        <span class="unit">gr</span>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <div class="card text-white bg-danger mb-3">
-                        <div class="card-body">
-                            <h5 class="card-title">Sisa Pakan</h5>
-                            <p class="card-text" id="feed">200g</p>
-                        </div>
+                <div class="value-container">
+                    <div>
+                        <span>Waktu Pemberian Pakan:</span>
+                        <ul>
+                            <li id="feedTime1">06:00</li>
+                            <li id="feedTime2">12:00</li>
+                            <li id="feedTime3">18:00</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="controls">
+                    <button class="button" onclick="openFeedSettings()">Atur Pakan</button>
+                    <button class="button" onclick="openPIDSettings()">Atur Lingkungan</button>
+                </div>
+            </div>
+            
+            <!-- Modal untuk Pengaturan Pakan -->
+            <div class="modal-overlay" id="feedSettingsModal">
+                <div class="modal">
+                    <div class="modal-header">
+                        <h3>Pengaturan Pakan</h3>
+                        <span class="close" onclick="closeFeedSettings()">&times;</span>
+                    </div>
+                    <div class="modal-body">
+                        <label>Jumlah Pakan per Waktu (gr):</label>
+                        <input type="number" id="targetFeed" placeholder="Target (gr)">
+                        
+                        <label>Waktu Pemberian Pakan:</label>
+                        <input type="time" id="feedTime1Input" value="06:00">
+                        <input type="time" id="feedTime2Input" value="12:00">
+                        <input type="time" id="feedTime3Input" value="18:00">
+                        
+                        <button class="button" onclick="saveFeedSettings()">Simpan</button>
                     </div>
                 </div>
             </div>
             
-            <!-- Sensor Cards Row 2 -->
-            <div class="row">
-                <div class="col-md-3">
-                    <div class="card text-white bg-primary mb-3">
-                        <div class="card-body">
-                            <h5 class="card-title">Tekanan Udara</h5>
-                            <p class="card-text"><span id="pressure">--</span> pa</p>
-                        </div>
+            <!-- Modal untuk Pengaturan PID -->
+            <div class="modal-overlay" id="pidSettingsModal">
+                <div class="modal">
+                    <div class="modal-header">
+                        <h3>Pengaturan Setpoint PID</h3>
+                        <span class="close" onclick="closePIDSettings()">&times;</span>
                     </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card text-white bg-primary mb-3">
-                        <div class="card-body">
-                            <h5 class="card-title">Ketinggian</h5>
-                            <p class="card-text"><span id="altitude">--</span> m</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Charts -->
-            <div class="row">
-                <div class="col-md-8">
-                    <div class="card mb-3">
-                        <div class="card-body">
-                            <h5 class="card-title">Kondisi Kandang</h5>
-                            <canvas id="environmentChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card mb-3">
-                        <div class="card-body">
-                            <h5 class="card-title">Berat Maggot</h5>
-                            <canvas id="weightChart"></canvas>
-                        </div>
+                    <div class="modal-body">
+                        <label>Setpoint Suhu (°C):</label>
+                        <input type="number" id="tempSetpoint" step="0.1">
+                        
+                        <label>Setpoint Kelembaban (%):</label>
+                        <input type="number" id="humiditySetpoint" step="0.1">
+                        
+                        <button class="button" onclick="savePIDSettings()">Simpan</button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="js/script.js"></script>
 </body>
 </html>
