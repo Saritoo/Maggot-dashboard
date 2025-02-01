@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const path = require('path');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const sequelize = require('./src/config/database');
@@ -14,6 +15,9 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+
+// Serve file statis dari folder "public"
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Database Connection Check
 sequelize.authenticate()
@@ -37,7 +41,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-// 404 Handler
+// 404 Handler (untuk endpoint yang tidak cocok)
 app.use((req, res) => {
   res.status(404).json({
     error: 'Endpoint not found',
@@ -46,7 +50,7 @@ app.use((req, res) => {
 });
 
 // Server Startup
-const PORT = process.env.PORT || 3001
+const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`
   ==================================================

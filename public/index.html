@@ -18,24 +18,23 @@
                 <span class="material-icons">thermostat</span>
             </div>
             
-            <!-- Current Values -->
+            <!-- Setpoint Values (Diambil dari Pengaturan) -->
             <div class="value-container">
                 <span class="material-icons icon">device_thermostat</span>
                 <div>
-                    <span class="value" id="temperature">--</span>
+                    <span class="value" id="setpointTemperature">--</span>
                     <span class="unit">°C</span>
                 </div>
                 <div>
-                    <span class="value" id="humidity">--</span>
+                    <span class="value" id="setpointHumidity">--</span>
                     <span class="unit">%</span>
                 </div>
             </div>
         
-            <!-- Realtime Values -->
+            <!-- Realtime Values (Dari Sensor) -->
             <div class="Realtime-container">
                 <div class="Realtime-item">
                     <span class="material-icons" style="font-size: 1.5rem; color: var(--secondary-color);">device_thermostat</span>
-                    <!-- <span class="Realtime-label">Realtime Suhu</span> -->
                     <div>
                         <span class="Realtime-value" id="temperatureRealtimeValue">--</span>
                         <span class="unit">°C</span>
@@ -44,18 +43,17 @@
                 
                 <div class="Realtime-item">
                     <span class="material-icons" style="font-size: 1.5rem; color: var(--secondary-color);">water_drop</span>
-                    <!-- <span class="Realtime-label">Realtime Kelembaban</span> -->
                     <div>
                         <span class="Realtime-value" id="humidityRealtimeValue">--</span>
                         <span class="unit">%</span>
                     </div>
                 </div>
-                
             </div>
         
             <div class="chart-container">
                 <canvas id="environmentChart"></canvas>
             </div>
+            
         </div>
 
         <div class="cards-right">
@@ -95,6 +93,11 @@
             <span class="value" id="feedWeight">--</span>
             <span class="unit">gr</span>
         </div>
+        <div class="data-box">
+            <span class="label">Jumlah Pakan per Waktu</span>
+            <span class="value" id="totalFeedPerTime">--</span>
+            <span class="unit">gr</span>
+        </div>
     </div>
 
     <div class="feed-time">
@@ -110,9 +113,7 @@
         <button class="button" onclick="openFeedSettings()">Atur Pakan</button>
         <button class="button" onclick="openPIDSettings()">Atur Lingkungan</button>
     </div>
-</div>
-
-            
+</div>      
             <!-- Modal untuk Pengaturan Pakan -->
             <div class="modal-overlay" id="feedSettingsModal">
                 <div class="modal">

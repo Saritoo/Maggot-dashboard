@@ -1,7 +1,8 @@
 // MQTT credentials// MQTT credentials
+require('dotenv').config();
 const mqttCredentials = {
-  broker: 'broker.hivemq.com',
-  port: 1883,
+  broker: process.env.MQTT_BROKER || 'broker.hivemq.com',
+  port: process.env.MQTT_PORT || 1883,
 };
 
 module.exports = mqttCredentials;

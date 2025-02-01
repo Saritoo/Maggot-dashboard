@@ -5,8 +5,8 @@ const pidConfig = {
   kp: 2.0,
   ki: 0.5,
   kd: 1.0,
-  targetTemp: 28,
-  targetHumidity: 65,
+  targetTemp: 50,
+  targetHumidity: 30,
   sampleTime: 1000 // PID update interval in milliseconds
 };
 
@@ -33,7 +33,7 @@ function calculatePID(current, target, lastError, integral) {
   let output = pidConfig.kp * error + pidConfig.ki * integral + pidConfig.kd * derivative;
 
   // Ensure PWM is within 0-255 range
-  output = Math.max(0, Math.min(255, output));
+  output = Math.max(0, Math.min(80, output));
 
   return { output, integral, error };
 }
@@ -77,8 +77,10 @@ function processSensorData(temperature, humidity) {
 
   // Prepare PWM data
   const pwmData = {
-    tempPWM: Math.round(tempResult.output),
-    humidityPWM: Math.round(humidityResult.output),
+    TemperatureSetPoint: pidConfig.targetTemp,
+    HumiditySetPoint: pidConfig.targetHumidity,
+    PwmFanHeater: Math.round(tempResult.output),
+    PwmFanHumidifier: Math.round(humidityResult.output),
     timestamp: new Date().toISOString()
   };
 
