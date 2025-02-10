@@ -1,0 +1,12 @@
+# Abaikan direktori dependencies
+node_modules/
+
+# Abaikan file environment lokal
+.env
+
+# Abaikan file log
+*.log
+
+# Direktori build atau output (jika ada)
+dist/
+build/
