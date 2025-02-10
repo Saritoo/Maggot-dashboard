@@ -10,7 +10,7 @@
 <body>
     <div class="dashboard">
         <!-- Environment Card -->
-        <div class="card card-lingkungan">
+        <div class="card card-lingkungan active" id="cardLingkungan">
             <div class="card-header">
                 <h2 class="card-title">Lingkungan
                     <span class="material-icons" style="font-size: 1.2rem; margin-left: 0.5rem;">adjust</span>
@@ -58,7 +58,7 @@
 
         <div class="cards-right">
             <!-- PLTS Status Card -->
-            <div class="card">
+            <div class="card" id="cardPLTS">
                 <div class="card-header">
                     <h2 class="card-title">Status PLTS</h2>
                     <span class="material-icons">solar_power</span>
@@ -76,7 +76,7 @@
             </div>
 
 <!-- Feeding & PID Control Card -->
-<div class="card">
+<div class="card" id="cardPID">
     <div class="card-header">
         <h2 class="card-title">Pengaturan Pakan & PID</h2>
         <span class="material-icons icon-large">settings</span>
@@ -114,6 +114,12 @@
         <button class="button" onclick="openPIDSettings()">Atur Lingkungan</button>
     </div>
 </div>      
+    <!-- Mobile Footer -->
+    <div class="mobile-footer">
+        <button id="btnLingkungan" class="active" onclick="showCard('cardLingkungan')">Lingkungan</button>
+        <button id="btnPLTS" onclick="showCard('cardPLTS')">PLTS</button>
+        <button id="btnPID" onclick="showCard('cardPID')">Pakan & PID</button>
+    </div>
             <!-- Modal untuk Pengaturan Pakan -->
             <div class="modal-overlay" id="feedSettingsModal">
                 <div class="modal">
@@ -144,10 +150,10 @@
                     </div>
                     <div class="modal-body">
                         <label>Setpoint Suhu (°C):</label>
-                        <input type="number" id="tempSetpoint" step="0.1">
+                        <input type="number" id="tempSetpoint" step="0.1" min="0" max="100">
                         
                         <label>Setpoint Kelembaban (%):</label>
-                        <input type="number" id="humiditySetpoint" step="0.1">
+                        <input type="number" id="humiditySetpoint" step="0.1" min="0" max="100">
                         
                         <button class="button" onclick="savePIDSettings()">Simpan</button>
                     </div>
@@ -155,7 +161,7 @@
             </div>
         </div>
     </div>
-
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="js/script.js"></script>
 </body>

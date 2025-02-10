@@ -35,53 +35,6 @@ const envChart = new Chart(envCtx, {
     }
 });
 
-// // Fungsi Update Data Real-time
-// async function updateData() {
-//     try {
-//         const response = await fetch(SENSOR_LATEST_URL);
-//         if (!response.ok) throw new Error('Gagal mengambil data');
-//         const data = await response.json();
-        
-//         // Update nilai utama
-//         document.getElementById('temperature').textContent = data.temperature.toFixed(1);
-//         document.getElementById('humidity').textContent = data.humidity.toFixed(1);
-//         document.getElementById('voltage').textContent = data.voltage.toFixed(2);
-        
-//         // Update nilai real-time
-//         document.getElementById('temperatureRealtimeValue').textContent = 
-//             (typeof data.temperaturereal === "number") ? data.temperaturereal.toFixed(1) : '--';
-
-//         document.getElementById('humidityRealtimeValue').textContent = 
-//             (typeof data.humidityreal === "number") ? data.humidityreal.toFixed(1) : '--';
-
-//         // Update chart
-//         const labels = envChart.data.labels;
-//         const newLabel = new Date(data.createdAt).toLocaleTimeString();
-//         labels.push(newLabel);
-//         if(labels.length > 15) labels.shift();
-        
-//         envChart.data.datasets[0].data.push(data.temperature);
-//         envChart.data.datasets[1].data.push(data.humidity);
-        
-//         if(envChart.data.datasets[0].data.length > 15) {
-//             envChart.data.datasets[0].data.shift();
-//             envChart.data.datasets[1].data.shift();
-//         }
-        
-//         envChart.update();
-        
-//         // Update level baterai
-//         const batteryLevel = ((data.voltage - 11) / (14 - 11) * 100).toFixed(1);
-//         document.getElementById('batteryLevel').style.width = `${Math.min(Math.max(batteryLevel, 0), 100)}%`;
-        
-//     } catch (error) {
-//         console.error('Error:', error);
-//         // Tampilkan nilai default jika error
-//         document.getElementById('temperature').textContent = '--';
-//         document.getElementById('humidity').textContent = '--';
-//         document.getElementById('voltage').textContent = '--';
-//     }
-// }
 
 async function updateData() {
     try {
@@ -141,17 +94,46 @@ async function fetchHistoricalData() {
         console.error('Error:', error);
     }
 }
-
+async function getFeedSettings() {
+    try {
+        const response = await fetch(FEED_SETTINGS_URL);
+        if (!response.ok) throw new Error('Gagal mengambil data pengaturan pakan');
+        const settings = await response.json();
+        // Asumsikan response berbentuk { data: { times: [...], amount: ... } }
+        if(settings && settings.data) {
+            const { times, amount } = settings.data;
+            // Perbarui tampilan pada dashboard
+            document.getElementById('feedTime1').textContent = times[0];
+            document.getElementById('feedTime2').textContent = times[1];
+            document.getElementById('feedTime3').textContent = times[2];
+            document.getElementById('totalFeedPerTime').textContent = amount;
+            // Prefill nilai di modal (jika diperlukan)
+            document.getElementById('feedTime1Input').value = times[0];
+            document.getElementById('feedTime2Input').value = times[1];
+            document.getElementById('feedTime3Input').value = times[2];
+            document.getElementById('targetFeed').value = amount;
+        }
+    } catch (error) {
+        console.error("❌ Error getFeedSettings:", error);
+    }
+}
 // Fungsi Pengaturan Pakan
 async function saveFeedSettings() {
-    const feedSettings = {
-        times: [
-            document.getElementById('feedTime1Input').value,
-            document.getElementById('feedTime2Input').value,
-            document.getElementById('feedTime3Input').value
-        ],
-        amount: document.getElementById('targetFeed').value
-    };
+    // Ambil nilai baru dari modal
+    const time1 = document.getElementById('feedTime1Input').value;
+    const time2 = document.getElementById('feedTime2Input').value;
+    const time3 = document.getElementById('feedTime3Input').value;
+    const targetFeedInput = document.getElementById('targetFeed').value;
+    
+    // Jika input kosong, kirim undefined (backend akan menggunakan data sebelumnya)
+    const times = [time1 || undefined, time2 || undefined, time3 || undefined];
+    // Jika targetFeed kosong, kirim undefined
+    const amount = targetFeedInput !== "" ? parseFloat(targetFeedInput) : undefined;
+
+    // Siapkan objek yang hanya berisi properti yang didefinisikan
+    const feedSettings = {};
+    if(times.some(val => val !== undefined)) feedSettings.times = times;
+    if(amount !== undefined) feedSettings.amount = amount;
 
     try {
         const response = await fetch(FEED_SETTINGS_URL, {
@@ -163,48 +145,127 @@ async function saveFeedSettings() {
         });
         
         if (response.ok) {
-            document.getElementById('feedTime1').textContent = feedSettings.times[0];
-            document.getElementById('feedTime2').textContent = feedSettings.times[1];
-            document.getElementById('feedTime3').textContent = feedSettings.times[2];
-            document.getElementById('totalFeedPerTime').textContent = feedSettings.amount;
+            const result = await response.json();
+            // Tampilkan notifikasi sukses dengan SweetAlert2
+            Swal.fire({
+                icon: 'success',
+                title: 'Berhasil',
+                text: result.message || 'Pengaturan pakan telah disimpan!'
+            });
+            // Tutup modal
             closeFeedSettings();
+            // Perbarui tampilan dashboard dengan data terbaru
+            getFeedSettings();
+        } else {
+            const errorData = await response.json();
+            Swal.fire({
+                icon: 'error',
+                title: 'Gagal',
+                text: errorData.error || 'Gagal menyimpan pengaturan pakan'
+            });
         }
     } catch (error) {
-        console.error('Error:', error);
-        alert('Gagal menyimpan pengaturan pakan');
+        console.error('❌ Error saveFeedSettings:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Gagal menyimpan pengaturan pakan'
+        });
     }
 }
 
-// Fungsi Pengaturan PID
+// Fungsi untuk mengambil pengaturan PID dari backend dan memperbarui tampilan UI
+async function getPIDSettings() {
+    try {
+        const response = await fetch(PID_SETTINGS_URL);
+        if (!response.ok) throw new Error('Gagal mengambil data pengaturan PID');
+        const settings = await response.json();
+
+        if (settings && settings.data) {
+            const { targetTemp, targetHumidity } = settings.data;
+            
+            // Simpan ke localStorage
+            localStorage.setItem('targetTemp', targetTemp);
+            localStorage.setItem('targetHumidity', targetHumidity);
+            
+            // Perbarui tampilan pada dashboard
+            document.getElementById('setpointTemperature').textContent = parseFloat(targetTemp).toFixed(1);
+            document.getElementById('setpointHumidity').textContent = parseFloat(targetHumidity).toFixed(1);
+            
+            // Prefill nilai di modal
+            document.getElementById('tempSetpoint').value = targetTemp;
+            document.getElementById('humiditySetpoint').value = targetHumidity;
+        }
+    } catch (error) {
+        console.error("❌ Error getPIDSettings:", error);
+    }
+}
+
+// Fungsi Pengaturan PID dengan SweetAlert2 dan update parsial
 async function savePIDSettings() {
+    const tempVal = document.getElementById('tempSetpoint').value;
+    const humidityVal = document.getElementById('humiditySetpoint').value;
+    
+    if(tempVal === "" || humidityVal === "") {
+        Swal.fire({
+            icon: 'error',
+            title: 'Gagal',
+            text: 'Data pengaturan PID tidak lengkap.'
+        });
+        return;
+    }
+    
     const pidSettings = {
-        temperature: document.getElementById('tempSetpoint').value,
-        humidity: document.getElementById('humiditySetpoint').value
+        targetTemp: parseFloat(tempVal),
+        targetHumidity: parseFloat(humidityVal)
     };
 
     try {
         const response = await fetch(PID_SETTINGS_URL, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(pidSettings)
         });
-        
+
         if (response.ok) {
-            alert("Setpoint suhu dan kelembaban telah diperbarui!");
-            closePIDSettings();
+            const result = await response.json();
+            
+            // Simpan ke localStorage
+            localStorage.setItem('targetTemp', pidSettings.targetTemp);
+            localStorage.setItem('targetHumidity', pidSettings.targetHumidity);
+
+            // Perbarui tampilan dashboard untuk PID
+            document.getElementById('setpointTemperature').textContent = pidSettings.targetTemp.toFixed(1);
+            document.getElementById('setpointHumidity').textContent = pidSettings.targetHumidity.toFixed(1);
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Berhasil',
+                text: 'Pengaturan PID berhasil disimpan.'
+            });
+        } else {
+            throw new Error('Gagal menyimpan data ke server');
         }
     } catch (error) {
-        console.error('Error:', error);
-        alert('Gagal menyimpan pengaturan PID');
+        console.error("❌ Error savePIDSettings:", error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Gagal',
+            text: 'Terjadi kesalahan saat menyimpan pengaturan.'
+        });
     }
 }
 
 // Event Listeners dan Inisialisasi
 document.addEventListener('DOMContentLoaded', async () => {
+    console.log("Script berjalan...");
     await fetchHistoricalData();
-    setInterval(updateData, 2000); // Update data setiap 2 detik
+    // Mulai update data sensor, chart, dsb. (kode updateData() dsb.)
+    setInterval(updateData, 2000);
+    updateData();
+    // Dapatkan data pengaturan terbaru dari backend
+    getFeedSettings();
+    getPIDSettings();
 });
 
 // Modal Functions
@@ -224,3 +285,24 @@ function closePIDSettings() {
     document.getElementById("pidSettingsModal").style.display = "none";
 }
 
+function showCard(cardId) {
+    // Hapus kelas active dari semua card
+    var cards = document.querySelectorAll('.dashboard .card');
+    cards.forEach(function(card) {
+        card.classList.remove('active');
+    });
+    // Tambahkan kelas active ke card yang diinginkan
+    document.getElementById(cardId).classList.add('active');
+    
+    // Perbarui status tombol pada mobile footer
+    document.querySelectorAll('.mobile-footer button').forEach(function(btn) {
+        btn.classList.remove('active');
+    });
+    if (cardId === 'cardLingkungan') {
+        document.getElementById('btnLingkungan').classList.add('active');
+    } else if (cardId === 'cardPLTS') {
+        document.getElementById('btnPLTS').classList.add('active');
+    } else if (cardId === 'cardPID') {
+        document.getElementById('btnPID').classList.add('active');
+    }
+}

@@ -1,5 +1,6 @@
 const { DataTypes } = require('sequelize');
-const sequelize = require('../config/database');
+// Lakukan destructuring untuk mendapatkan instance sequelize yang benar
+const { sequelize } = require('../config/database');
 
 const Sensor = sequelize.define('Sensor', {
   id: {

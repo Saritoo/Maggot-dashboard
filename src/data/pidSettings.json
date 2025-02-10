@@ -1,0 +1,9 @@
+{
+  "kp": 2,
+  "ki": 0.5,
+  "kd": 1,
+  "targetTemp": 25,
+  "targetHumidity": 78.6,
+  "sampleTime": 1000,
+  "updatedAt": "2025-02-10T09:52:56.554Z"
+}
