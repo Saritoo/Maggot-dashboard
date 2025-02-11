@@ -38,8 +38,9 @@ router.get('/sensor/history', async (req, res) => {
   }
 });
 
-// Endpoint untuk mendapatkan data ATS terbaru
+// Endpoint: Data ATS terbaru
 router.get('/ats/latest', atsController.getLatestATSData);
+
 // Endpoint: Pengaturan PID
 router.post('/pid/settings', pidController.savePIDSettings);
 router.get('/pid/settings', pidController.getPIDSettings);

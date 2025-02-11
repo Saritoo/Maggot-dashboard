@@ -362,7 +362,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     getFeedSettings();
     getPIDSettings();
 });
-
+  
 // Modal Functions
 function openFeedSettings() {
     document.getElementById("feedSettingsModal").style.display = "flex";

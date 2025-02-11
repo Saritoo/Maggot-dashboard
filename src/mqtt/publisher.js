@@ -85,7 +85,7 @@ const checkFeedSchedule = () => {
         // Buat payload khusus untuk perintah pakan
         const feedData = {
           pakanTimer: 1,
-          amount: settings.amount
+          pakanOutput: settings.amount
         };
 
         // Pastikan hanya feedData yang dikirim

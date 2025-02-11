@@ -43,7 +43,7 @@ function saveFeedSettings(req, res) {
       // Buat payload minimal untuk publish
       const feedCommand = {
         pakanTimer: 1,
-        amount: updatedSettings.amount
+        pakanOutput: updatedSettings.amount
       };
       // Publish hanya payload minimal ke MQTT
       publishFeedSchedule(feedCommand);
@@ -152,7 +152,7 @@ async function checkAndPublishFeedSchedule(req, res) {
       // Buat payload khusus hanya untuk perintah pakan
       const feedData = {
         pakanTimer: 1,
-        amount: settings.amount
+        pakanOutput: settings.amount
       };
 
       // Publish payload minimal ke MQTT
