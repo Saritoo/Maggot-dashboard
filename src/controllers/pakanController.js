@@ -3,7 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const Pakan = require('../models/pakanModel');
-// Pastikan feedJsonPath mengacu ke file feedSettings.json yang benar (sesuai struktur folder Anda)
+// Pastikan feedJsonPath mengacu ke file feedSettings.json yang benar
 const feedJsonPath = path.join(__dirname, '../../data/feedSettings.json');
 // Import fungsi publish dari modul MQTT publisher
 const { publishFeedSchedule } = require('../mqtt/publisher');
@@ -11,6 +11,8 @@ const { publishFeedSchedule } = require('../mqtt/publisher');
 /**
  * saveFeedSettings
  * Menyimpan pengaturan pakan ke file JSON dengan update parsial.
+ * Setelah menyimpan, publish hanya payload minimal:
+ * { pakanTimer: 1, amount: <nilai> }
  */
 function saveFeedSettings(req, res) {
   const { times, amount } = req.body;
@@ -26,7 +28,6 @@ function saveFeedSettings(req, res) {
       }
     }
 
-    // Gunakan data lama jika nilai baru tidak dikirim
     const updatedSettings = {
       times: times || previousSettings.times || ["06:00", "12:00", "18:00"],
       amount: amount !== undefined ? parseFloat(amount) : previousSettings.amount || 100,
@@ -39,10 +40,15 @@ function saveFeedSettings(req, res) {
         console.error('❌ Error menulis feed settings:', writeErr);
         return res.status(500).json({ error: 'Gagal menyimpan pengaturan pakan.' });
       }
-      // Publish ke MQTT (misalnya, publishFeedSchedule mengirim ke topik pakan/timer/master)
-      publishFeedSchedule(updatedSettings);
+      // Buat payload minimal untuk publish
+      const feedCommand = {
+        pakanTimer: 1,
+        amount: updatedSettings.amount
+      };
+      // Publish hanya payload minimal ke MQTT
+      publishFeedSchedule(feedCommand);
       return res.status(200).json({
-        message: 'Pengaturan pakan berhasil disimpan.',
+        message: 'Pengaturan pakan berhasil disimpan. Perintah telah dipublish: ' + JSON.stringify(feedCommand),
         data: updatedSettings
       });
     });
@@ -76,30 +82,23 @@ function getFeedSettings(req, res) {
  */
 async function getLatestPakanData(req, res) {
   try {
-    // Ambil record pakan terbaru berdasarkan feedTime secara menurun
     const latestRecord = await Pakan.findOne({
       order: [['feedTime', 'DESC']]
     });
     if (!latestRecord) {
       return res.status(404).json({ message: 'Tidak ada data pakan tersedia' });
     }
-    res.json(latestRecord);
+    return res.json(latestRecord);
   } catch (error) {
     console.error('❌ Error fetching latest pakan data:', error);
-    res.status(500).json({ error: 'Terjadi kesalahan saat mengambil data pakan' });
+    return res.status(500).json({ error: 'Terjadi kesalahan saat mengambil data pakan' });
   }
 }
 
 /**
  * getRealtimePakanData
- * Endpoint untuk menampilkan nilai berat pakan dan maggot secara realtime.
+ * Mengambil data realtime pakan (nilai berat pakan dan maggot) dari record pakan terbaru.
  * Endpoint: GET /pakan/realtime
- * Mengembalikan data:
- *  - beforeFeedStock (stok pakan sebelum feed)
- *  - beforeMaggotWeight (berat maggot sebelum feed)
- *  - afterFeedStock (stok pakan setelah feed, jika sudah diupdate)
- *  - afterMaggotWeight (berat maggot setelah feed, jika sudah diupdate)
- *  - feedTime (timestamp)
  */
 async function getRealtimePakanData(req, res) {
   try {
@@ -109,25 +108,26 @@ async function getRealtimePakanData(req, res) {
     if (!latestRecord) {
       return res.status(404).json({ message: 'Tidak ada data pakan tersedia' });
     }
-    res.json({
+    return res.json({
       beforeFeedStock: latestRecord.beforeFeedStock,
       beforeMaggotWeight: latestRecord.beforeMaggotWeight,
       afterFeedStock: latestRecord.afterFeedStock,
-      afterMaggotWeight: latestRecord.afterMaggotWeight, // Pastikan field ini sesuai dengan definisi model
+      afterFeedWeight: latestRecord.afterFeedWeight, // Pastikan field ini sesuai dengan definisi model
       feedTime: latestRecord.feedTime
     });
   } catch (error) {
     console.error('❌ Error fetching realtime pakan data:', error);
-    res.status(500).json({ error: 'Terjadi kesalahan saat mengambil data pakan realtime' });
+    return res.status(500).json({ error: 'Terjadi kesalahan saat mengambil data pakan realtime' });
   }
 }
 
 /**
  * checkAndPublishFeedSchedule
- * Mengecek apakah sudah waktunya pemberian pakan, dan jika ya, mem-publish perintah ke MQTT.
+ * Mengecek apakah saat ini sudah waktunya pemberian pakan, dan jika ya:
+ * 1. Membuat payload { pakanTimer: 1, amount: <nilai feed settings> }.
+ * 2. Mem-publish payload ke MQTT.
+ * 3. Mengupdate file feed settings dengan waktu terakhir pengiriman.
  * Endpoint: POST /pakan/check
- * Jika kondisi terpenuhi, perintah dikirim ke topik pakan/timer/master dengan payload:
- * { pakanTimer: 1, amount: <nilai pengaturan pakan> }
  */
 async function checkAndPublishFeedSchedule(req, res) {
   try {
@@ -149,13 +149,13 @@ async function checkAndPublishFeedSchedule(req, res) {
     if (settings.times.includes(currentHourMinute) && lastSentDate !== currentDate) {
       console.log(`⏰ Saatnya memberi pakan pada ${currentHourMinute}`);
 
-      // Buat payload untuk perintah pemberian pakan
+      // Buat payload khusus hanya untuk perintah pakan
       const feedData = {
         pakanTimer: 1,
         amount: settings.amount
       };
 
-      // Publish perintah ke MQTT (misalnya ke topik pakan/timer/master) menggunakan fungsi publishFeedSchedule
+      // Publish payload minimal ke MQTT
       publishFeedSchedule(feedData);
 
       // Update waktu terakhir pengiriman di file feed settings
@@ -164,6 +164,7 @@ async function checkAndPublishFeedSchedule(req, res) {
 
       return res.json({
         message: 'Waktu pemberian pakan telah terdeteksi. Perintah untuk mengeluarkan pakan telah dipublish.',
+        publishedMessage: feedData,
         settings: settings
       });
     } else {
@@ -176,7 +177,7 @@ async function checkAndPublishFeedSchedule(req, res) {
     }
   } catch (error) {
     console.error('❌ Error in checkAndPublishFeedSchedule:', error);
-    res.status(500).json({ error: 'Terjadi kesalahan saat memeriksa jadwal pakan' });
+    return res.status(500).json({ error: 'Terjadi kesalahan saat memeriksa jadwal pakan' });
   }
 }
 

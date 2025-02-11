@@ -41,15 +41,16 @@ const publishPWM = (pwmData) => {
 /**
  * publishFeedSchedule
  * Mengirim perintah pemberian pakan ke topik FEED_TIMER_TOPIC.
- * Payload yang dikirim: { pakanTimer: 1, amount: <nilai amount dari feed settings> }
+ * Payload yang dikirim harus hanya berisi { pakanTimer: 1, amount: <nilai feed settings> }.
  */
 const publishFeedSchedule = (feedScheduleData) => {
-  console.log(`📡 Publishing Feed Schedule:`, JSON.stringify(feedScheduleData));
+  console.log("DEBUG: Publishing Feed Schedule to topic:", FEED_TIMER_TOPIC);
+  console.log("DEBUG: Payload:", JSON.stringify(feedScheduleData));
   client.publish(FEED_TIMER_TOPIC, JSON.stringify(feedScheduleData), (err) => {
     if (err) {
-      console.error('❌ Failed to publish Feed Schedule:', err);
+      console.error("❌ Failed to publish Feed Schedule:", err);
     } else {
-      console.log('✅ Successfully published Feed Schedule');
+      console.log("✅ Successfully published Feed Schedule with payload:", JSON.stringify(feedScheduleData));
     }
   });
 };
@@ -65,8 +66,9 @@ const publishFeedSchedule = (feedScheduleData) => {
  */
 const checkFeedSchedule = () => {
   fs.readFile(feedJsonPath, 'utf8', (err, data) => {
-    if (err) return console.error('❌ Error membaca file feed settings:', err);
-
+    if (err) {
+      return console.error('❌ Error membaca file feed settings:', err);
+    }
     try {
       const settings = JSON.parse(data);
       const currentTime = new Date();
@@ -77,23 +79,29 @@ const checkFeedSchedule = () => {
       const lastSentDate = lastSentTime ? lastSentTime.toDateString() : null;
       const currentDate = currentTime.toDateString();
 
-      // Jika waktu saat ini terdapat di jadwal dan belum ada pengiriman hari ini
       if (settings.times.includes(currentHourMinute) && lastSentDate !== currentDate) {
         console.log(`⏰ Saatnya memberi pakan pada ${currentHourMinute}`);
 
-        // Buat payload untuk perintah pemberian pakan
+        // Buat payload khusus untuk perintah pakan
         const feedData = {
           pakanTimer: 1,
           amount: settings.amount
         };
 
-        // Gunakan publishFeedSchedule untuk mengirim perintah ke MQTT
+        // Pastikan hanya feedData yang dikirim
         publishFeedSchedule(feedData);
 
-        // Ambil data sensor terbaru sebagai data "before feed"
+        // Update waktu terakhir pengiriman di file feed settings
+        settings.lastSentTime = currentTime.toISOString();
+        fs.writeFile(feedJsonPath, JSON.stringify(settings, null, 2), (writeErr) => {
+          if (writeErr) {
+            console.error('❌ Gagal menyimpan waktu terakhir pengiriman:', writeErr);
+          }
+        });
+
+        // Lanjutkan proses: ambil data sensor sebagai data "before feed" dan buat record pakan
         Sensor.findOne({ order: [['createdAt', 'DESC']] })
           .then((beforeSensorData) => {
-            // Buat record pakan di database dengan data "before feed"
             Pakan.create({
               amount: settings.amount,
               feedTime: currentTime,
@@ -102,13 +110,6 @@ const checkFeedSchedule = () => {
             })
               .then((pakanRecord) => {
                 console.log('✅ Feed log created with before feed data');
-
-                // Update waktu terakhir pengiriman di file feed settings
-                settings.lastSentTime = currentTime.toISOString();
-                fs.writeFile(feedJsonPath, JSON.stringify(settings, null, 2), (writeErr) => {
-                  if (writeErr)
-                    console.error('❌ Gagal menyimpan waktu terakhir pengiriman:', writeErr);
-                });
 
                 // Setelah delay 60 detik, ambil data sensor lagi sebagai data "after feed"
                 setTimeout(() => {
@@ -128,7 +129,7 @@ const checkFeedSchedule = () => {
                     .catch((afterErr) => {
                       console.error('❌ Error fetching sensor data after feed:', afterErr);
                     });
-                }, 60000); // Delay 60 detik
+                }, 60000);
               })
               .catch((pakanErr) => {
                 console.error('❌ Error creating feed log:', pakanErr);
