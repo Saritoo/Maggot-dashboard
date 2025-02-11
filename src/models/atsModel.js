@@ -1,5 +1,6 @@
+// src/models/atsModel.js
 const { DataTypes } = require('sequelize');
-const { sequelize } = require('../config/database'); 
+const { sequelize } = require('../config/database'); // Pastikan path relatif benar
 
 const Ats = sequelize.define('Ats', {
   id: {

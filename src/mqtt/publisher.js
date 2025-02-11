@@ -1,45 +1,51 @@
-// publisher.js
+// src/mqtt/publisher.js
 
 const fs = require('fs');
 const path = require('path');
 const mqtt = require('mqtt');
 const mqttCredentials = require('../config/mqtt');
 
-// Import model Sensor dan pakan
+// Import model Sensor dan pakan (jika diperlukan untuk mendapatkan data sensor)
 const Sensor = require('../models/sensorModel');
-const pakan = require('../models/pakanModel');
+const Pakan = require('../models/pakanModel');
 
-// Tentukan path ke file JSON feed settings
+// Tentukan path ke file JSON feed settings (pastikan letak file ini sesuai dengan struktur proyek)
 const feedJsonPath = path.join(__dirname, '../data/feedSettings.json');
 
+// Hubungkan ke broker MQTT
 const client = mqtt.connect(`mqtt://${mqttCredentials.broker}:${mqttCredentials.port}`);
 
 const PWM_TOPIC = 'pwm/master';
-const FEED_TOPIC = 'feed/schedule';
-const FEED_STATUS_TOPIC = 'feed/status';
+// Topik untuk perintah pemberian pakan: "pakan/timer/master"
+const FEED_TIMER_TOPIC = 'pakan/timer/master';
 
 client.on('connect', () => {
   console.log('Publisher connected to MQTT broker');
 });
 
+/**
+ * publishPWM
+ * Publish nilai PWM ke perangkat.
+ */
 const publishPWM = (pwmData) => {
   console.log(`Publishing PWM to ${PWM_TOPIC}:`, JSON.stringify(pwmData));
   client.publish(PWM_TOPIC, JSON.stringify(pwmData), (err) => {
     if (err) {
-      console.error('Failed to publish PWM:', err);
+      console.error('❌ Failed to publish PWM:', err);
     } else {
-      console.log('Successfully published PWM');
+      console.log('✅ Successfully published PWM');
     }
   });
 };
 
 /**
- * Publish jadwal dan jumlah pakan ke MQTT
- * @param {Object} feedScheduleData - Data pakan yang dikirimkan
+ * publishFeedSchedule
+ * Mengirim perintah pemberian pakan ke topik FEED_TIMER_TOPIC.
+ * Payload yang dikirim: { pakanTimer: 1, amount: <nilai amount dari feed settings> }
  */
 const publishFeedSchedule = (feedScheduleData) => {
-  console.log(`📡 Publishing Feed Schedule to ${FEED_TOPIC}:`, JSON.stringify(feedScheduleData));
-  client.publish(FEED_TOPIC, JSON.stringify(feedScheduleData), (err) => {
+  console.log(`📡 Publishing Feed Schedule:`, JSON.stringify(feedScheduleData));
+  client.publish(FEED_TIMER_TOPIC, JSON.stringify(feedScheduleData), (err) => {
     if (err) {
       console.error('❌ Failed to publish Feed Schedule:', err);
     } else {
@@ -49,11 +55,13 @@ const publishFeedSchedule = (feedScheduleData) => {
 };
 
 /**
- * Cek apakah saat ini adalah waktu pakan, jika iya:
- *  1. Ambil data sensor terbaru sebagai data "before feed"
- *  2. Publish perintah pemberian pakan ke MQTT (FEED_STATUS_TOPIC)
- *  3. Buat record pakan dengan data "before feed"
- *  4. Setelah delay, ambil data sensor lagi sebagai data "after feed" dan update pakan
+ * checkFeedSchedule
+ * Mengecek apakah saat ini sudah waktunya pemberian pakan, dan jika ya:
+ *   1. Ambil data sensor terbaru sebagai data "before feed"
+ *   2. Publish perintah pemberian pakan ke topik "pakan/timer/master" dengan payload:
+ *      { pakanTimer: 1, amount: <nilai feed settings> }
+ *   3. Buat record pakan dengan data "before feed" ke database.
+ *   4. Setelah delay (misalnya 60 detik), ambil data sensor lagi sebagai data "after feed" dan update record pakan.
  */
 const checkFeedSchedule = () => {
   fs.readFile(feedJsonPath, 'utf8', (err, data) => {
@@ -62,76 +70,69 @@ const checkFeedSchedule = () => {
     try {
       const settings = JSON.parse(data);
       const currentTime = new Date();
-      const currentHourMinute = currentTime.toTimeString().slice(0, 5); // "HH:MM"
+      const currentHourMinute = currentTime.toTimeString().slice(0, 5); // Format "HH:MM"
 
-      // Ambil waktu terakhir pengiriman
+      // Ambil waktu terakhir pengiriman, jika ada
       const lastSentTime = settings.lastSentTime ? new Date(settings.lastSentTime) : null;
       const lastSentDate = lastSentTime ? lastSentTime.toDateString() : null;
       const currentDate = currentTime.toDateString();
 
-      // Jika waktu sekarang sesuai jadwal dan belum dikirim hari ini
+      // Jika waktu saat ini terdapat di jadwal dan belum ada pengiriman hari ini
       if (settings.times.includes(currentHourMinute) && lastSentDate !== currentDate) {
         console.log(`⏰ Saatnya memberi pakan pada ${currentHourMinute}`);
 
-        // Data yang akan dikirimkan melalui MQTT
+        // Buat payload untuk perintah pemberian pakan
         const feedData = {
-          amount: settings.amount,
-          relay: "ON",
-          timestamp: currentTime.toISOString()
+          pakanTimer: 1,
+          amount: settings.amount
         };
+
+        // Gunakan publishFeedSchedule untuk mengirim perintah ke MQTT
+        publishFeedSchedule(feedData);
 
         // Ambil data sensor terbaru sebagai data "before feed"
         Sensor.findOne({ order: [['createdAt', 'DESC']] })
           .then((beforeSensorData) => {
-            // Publish perintah pemberian pakan ke FEED_STATUS_TOPIC
-            client.publish(FEED_STATUS_TOPIC, JSON.stringify(feedData), (err) => {
-              if (err) {
-                console.error('❌ Failed to publish Feed Status:', err);
-                return;
-              }
-              console.log('✅ Successfully published Feed Status');
+            // Buat record pakan di database dengan data "before feed"
+            Pakan.create({
+              amount: settings.amount,
+              feedTime: currentTime,
+              beforeMaggotWeight: beforeSensorData ? beforeSensorData.maggotWeight : null,
+              beforeFeedStock: beforeSensorData ? beforeSensorData.feedStock : null
+            })
+              .then((pakanRecord) => {
+                console.log('✅ Feed log created with before feed data');
 
-              // Buat record pakan dengan data "before feed"
-              pakan.create({
-                amount: settings.amount,
-                feedTime: currentTime,
-                beforeMaggotWeight: beforeSensorData ? beforeSensorData.maggotWeight : null,
-                beforeFeedStock: beforeSensorData ? beforeSensorData.feedStock : null
-              })
-                .then((pakanRecord) => {
-                  console.log('✅ Feed log created with before feed data');
-
-                  // Perbarui waktu terakhir pengiriman pada file JSON
-                  settings.lastSentTime = currentTime.toISOString();
-                  fs.writeFile(feedJsonPath, JSON.stringify(settings, null, 2), (writeErr) => {
-                    if (writeErr)
-                      console.error('❌ Gagal menyimpan waktu terakhir pengiriman:', writeErr);
-                  });
-
-                  // Setelah delay (misalnya 60 detik), ambil data sensor lagi sebagai data "after feed"
-                  setTimeout(() => {
-                    Sensor.findOne({ order: [['createdAt', 'DESC']] })
-                      .then((afterSensorData) => {
-                        pakanRecord.update({
-                          afterMaggotWeight: afterSensorData ? afterSensorData.maggotWeight : null,
-                          afterFeedStock: afterSensorData ? afterSensorData.feedStock : null
-                        })
-                          .then(() => {
-                            console.log('✅ Feed log updated with after feed data');
-                          })
-                          .catch((updateErr) => {
-                            console.error('❌ Error updating feed log:', updateErr);
-                          });
-                      })
-                      .catch((afterErr) => {
-                        console.error('❌ Error fetching sensor data after feed:', afterErr);
-                      });
-                  }, 60000); // Delay 60 detik (sesuaikan jika diperlukan)
-                })
-                .catch((pakanErr) => {
-                  console.error('❌ Error creating feed log:', pakanErr);
+                // Update waktu terakhir pengiriman di file feed settings
+                settings.lastSentTime = currentTime.toISOString();
+                fs.writeFile(feedJsonPath, JSON.stringify(settings, null, 2), (writeErr) => {
+                  if (writeErr)
+                    console.error('❌ Gagal menyimpan waktu terakhir pengiriman:', writeErr);
                 });
-            });
+
+                // Setelah delay 60 detik, ambil data sensor lagi sebagai data "after feed"
+                setTimeout(() => {
+                  Sensor.findOne({ order: [['createdAt', 'DESC']] })
+                    .then((afterSensorData) => {
+                      pakanRecord.update({
+                        afterMaggotWeight: afterSensorData ? afterSensorData.maggotWeight : null,
+                        afterFeedStock: afterSensorData ? afterSensorData.feedStock : null
+                      })
+                        .then(() => {
+                          console.log('✅ Feed log updated with after feed data');
+                        })
+                        .catch((updateErr) => {
+                          console.error('❌ Error updating feed log:', updateErr);
+                        });
+                    })
+                    .catch((afterErr) => {
+                      console.error('❌ Error fetching sensor data after feed:', afterErr);
+                    });
+                }, 60000); // Delay 60 detik
+              })
+              .catch((pakanErr) => {
+                console.error('❌ Error creating feed log:', pakanErr);
+              });
           })
           .catch((beforeErr) => {
             console.error('❌ Error fetching sensor data before feed:', beforeErr);
